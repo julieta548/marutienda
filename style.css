@@ -108,3 +108,44 @@ th{color:var(--mut);font-weight:600;border-top:0;background:var(--bg)}
 .foot p{margin:4px 0}
 .foot .links{display:flex;gap:18px;margin:14px 0}
 .foot .links a{font-weight:600}
+
+/* adaptación a pantallas */
+html,body{max-width:100%}
+body{overflow-x:clip}
+img{max-width:100%}
+h2{font-size:clamp(1.15rem,3.5vw,1.45rem)}
+button,.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.btn.sm{min-height:40px}
+.chip{min-height:40px}
+.row .acts button,.row .acts select{min-height:40px}
+.th button{width:28px;height:28px;min-height:0}
+.logo{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px}
+.top .btn{flex:none}
+.bar{flex-wrap:wrap}
+.bar input{flex:2 1 200px}
+.bar select{flex:1 1 130px;min-width:0}
+.collage{max-width:560px}
+dialog{max-height:92vh;max-height:92dvh}
+.foot .links{flex-wrap:wrap}
+@media(max-width:600px){
+  .wrap{padding:0 14px}
+  .hero{padding-top:26px;gap:28px}
+  .lead{font-size:1rem;margin:14px 0 20px}
+  .cta .btn{flex:1 1 100%}
+  .collage{gap:8px}
+  .collage .mini:nth-child(2){margin-top:18px}
+  .collage .mini:nth-child(3){margin-top:36px}
+  .pasos{padding-top:36px}
+  .intro{padding-top:32px}
+  .grid{gap:10px}
+  .panel{padding:16px;margin:12px 0}
+  .dlg{padding:16px}
+}
+@media(max-width:520px){
+  .form{grid-template-columns:1fr}
+  th,td{padding:8px}
+}
+@media(min-width:1400px){
+  .wrap{max-width:1240px}
+  .grid{columns:5}
+}
