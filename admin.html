@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <header style="padding:28px 0 0"><h1>Panel</h1></header>
+
+  <section id="login" class="panel hidden">
+    <h2>Ingresar</h2>
+    <div class="form" style="margin-top:12px">
+      <div class="full"><label for="em">Email</label><input id="em" type="email" autocomplete="username"></div>
+      <div class="full"><label for="pw">Contraseña</label><input id="pw" type="password" autocomplete="current-password"></div>
+      <button id="entrar" class="full">Ingresar</button>
+      <p id="lerr" class="err full"></p>
+    </div>
+  </section>
+
+  <div id="app" class="hidden">
+    <section class="panel">
+      <h2>Subir prenda</h2>
+      <div class="form" style="margin-top:12px">
+        <div class="full"><label for="fotos">Fotos (podés elegir varias)</label><input id="fotos" type="file" accept="image/*" multiple></div>
+        <div class="full"><label for="titulo">Título</label><input id="titulo" placeholder="Ej: Campera de jean"></div>
+        <div><label for="categoria">Categoría</label><input id="categoria" placeholder="Remeras, jeans..."></div>
+        <div><label for="talle">Talle</label><input id="talle"></div>
+        <div><label for="color">Color</label><input id="color"></div>
+        <div><label for="precio">Precio de venta ($)</label><input id="precio" type="number" inputmode="numeric"></div>
+        <div class="full"><label for="descripcion">Descripción</label><textarea id="descripcion" rows="2"></textarea></div>
+        <h3 class="full" style="margin-top:6px">Datos internos (no se publican)</h3>
+        <div><label for="local">Local de origen</label>
+          <select id="local"></select>
+          <input id="nuevoLocal" class="hidden" placeholder="Nombre del local nuevo" style="margin-top:6px"></div>
+        <div><label for="costo">Costo ($)</label><input id="costo" type="number" inputmode="numeric"></div>
+        <div class="full"><label for="grupo">Grupo de mayoristas donde la viste</label><input id="grupo"></div>
+        <div class="full"><label for="notas">Notas</label><textarea id="notas" rows="2"></textarea></div>
+        <button id="guardar" class="full">Publicar prenda</button>
+        <p id="gmsg" class="full mut"></p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Mis prendas</h2>
+      <div class="filters" style="margin-top:12px">
+        <select id="flocal" aria-label="Filtrar por local"><option value="">Todos los locales</option></select>
+        <select id="festado" aria-label="Filtrar por estado">
+          <option value="">Todos los estados</option><option>disponible</option><option>reservado</option><option>vendido</option>
+        </select>
+      </div>
+      <div id="lista"></div>
+    </section>
+    <button id="salir" class="sec">Cerrar sesión</button>
+    <p style="margin:24px 0"><a href="index.html">Ver catálogo público</a></p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const c = window.CONFIG, db = supabase.createClient(c.SUPABASE_URL, c.SUPABASE_KEY);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const num = v => v === '' ? null : Number(v);
+let prendas = [];
+
+async function comprimir(file) {
+  const bmp = await createImageBitmap(file), s = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
+  const cv = document.createElement('canvas'); cv.width = bmp.width * s; cv.height = bmp.height * s;
+  cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height);
+  return new Promise(r => cv.toBlob(r, 'image/jpeg', .8));
+}
+
+async function mostrar(logueada) {
+  $('#login').classList.toggle('hidden', logueada);
+  $('#app').classList.toggle('hidden', !logueada);
+  if (logueada) { await cargarLocales(); await cargarPrendas(); }
+}
+
+async function cargarLocales() {
+  const { data } = await db.from('locales').select('*').order('nombre');
+  const ops = (data || []).map(l => `<option value="${l.id}">${esc(l.nombre)}</option>`).join('');
+  $('#local').innerHTML = ops + '<option value="nuevo">+ Agregar local nuevo</option>';
+  $('#flocal').innerHTML = '<option value="">Todos los locales</option>' + ops;
+  $('#nuevoLocal').classList.toggle('hidden', $('#local').value !== 'nuevo');
+}
+
+async function cargarPrendas() {
+  const { data, error } = await db.from('prendas')
+    .select('*, prendas_privado(costo, grupo, notas, local_id, locales(nombre))')
+    .order('creada', { ascending: false });
+  if (error) { $('#lista').textContent = 'Error al cargar: ' + error.message; return; }
+  prendas = data; pintar();
+}
+
+const priv = p => Array.isArray(p.prendas_privado) ? p.prendas_privado[0] : p.prendas_privado;
+
+function pintar() {
+  const fl = $('#flocal').value, fe = $('#festado').value;
+  const l = prendas.filter(p => (!fl || String(priv(p)?.local_id) === fl) && (!fe || p.estado === fe));
+  $('#lista').innerHTML = l.length ? l.map(p => {
+    const x = priv(p) || {};
+    return `<div class="row" data-id="${p.id}">
+      <img src="${esc(p.fotos[0])}" alt="">
+      <div class="info"><strong>${esc(p.titulo)}</strong>
+        <div class="mut">${esc([p.talle && 'T. ' + p.talle, p.precio && '$' + p.precio].filter(Boolean).join(' · '))}</div>
+        <div class="mut">Local: ${esc(x.locales?.nombre || 'sin asignar')}${x.costo ? ' · costo $' + x.costo : ''}${x.grupo ? ' · ' + esc(x.grupo) : ''}</div></div>
+      <select data-a="estado" aria-label="Estado">${['disponible','reservado','vendido'].map(e => `<option ${e === p.estado ? 'selected' : ''}>${e}</option>`).join('')}</select>
+      <button class="sec" data-a="precio">Precio</button>
+      <button class="sec" data-a="borrar">Borrar</button>
+    </div>`;
+  }).join('') : '<p class="mut">No hay prendas con esos filtros.</p>';
+}
+
+$('#entrar').onclick = async () => {
+  const { error } = await db.auth.signInWithPassword({ email: $('#em').value, password: $('#pw').value });
+  if (error) $('#lerr').textContent = 'Email o contraseña incorrectos.'; else mostrar(true);
+};
+$('#salir').onclick = async () => { await db.auth.signOut(); mostrar(false); };
+$('#local').onchange = () => $('#nuevoLocal').classList.toggle('hidden', $('#local').value !== 'nuevo');
+$('#flocal').onchange = $('#festado').onchange = pintar;
+
+$('#guardar').onclick = async () => {
+  const msg = $('#gmsg'), files = [...$('#fotos').files], titulo = $('#titulo').value.trim();
+  if (!files.length || !titulo) { msg.textContent = 'Falta al menos una foto y el título.'; return; }
+  $('#guardar').disabled = true; msg.textContent = 'Subiendo fotos...';
+  try {
+    const urls = [];
+    for (const f of files) {
+      const path = crypto.randomUUID() + '.jpg';
+      const { error } = await db.storage.from('fotos').upload(path, await comprimir(f), { contentType: 'image/jpeg' });
+      if (error) throw error;
+      urls.push(db.storage.from('fotos').getPublicUrl(path).data.publicUrl);
+    }
+    let localId = $('#local').value;
+    if (localId === 'nuevo') {
+      const nombre = $('#nuevoLocal').value.trim();
+      if (!nombre) throw new Error('Escribí el nombre del local nuevo.');
+      const r = await db.from('locales').insert({ nombre }).select().single();
+      if (r.error) throw r.error; localId = r.data.id;
+    }
+    const { data, error } = await db.from('prendas').insert({
+      titulo, categoria: $('#categoria').value.trim() || null, talle: $('#talle').value.trim() || null,
+      color: $('#color').value.trim() || null, descripcion: $('#descripcion').value.trim() || null,
+      precio: num($('#precio').value), fotos: urls }).select().single();
+    if (error) throw error;
+    const r2 = await db.from('prendas_privado').insert({
+      prenda_id: data.id, local_id: localId ? Number(localId) : null, costo: num($('#costo').value),
+      grupo: $('#grupo').value.trim() || null, notas: $('#notas').value.trim() || null });
+    if (r2.error) throw r2.error;
+    ['fotos','titulo','categoria','talle','color','precio','descripcion','costo','grupo','notas','nuevoLocal'].forEach(i => $('#' + i).value = '');
+    msg.textContent = 'Prenda publicada.'; await cargarLocales(); await cargarPrendas();
+  } catch (e) { msg.textContent = 'No se pudo guardar: ' + e.message; }
+  $('#guardar').disabled = false;
+};
+
+$('#lista').addEventListener('change', async e => {
+  if (e.target.dataset.a !== 'estado') return;
+  const { error } = await db.from('prendas').update({ estado: e.target.value }).eq('id', e.target.closest('.row').dataset.id);
+  if (error) alert('No se pudo cambiar el estado: ' + error.message); await cargarPrendas();
+});
+
+$('#lista').addEventListener('click', async e => {
+  const a = e.target.dataset.a; if (!a || a === 'estado') return;
+  const id = e.target.closest('.row').dataset.id, p = prendas.find(x => x.id === id);
+  if (a === 'precio') {
+    const v = prompt('Nuevo precio:', p.precio ?? ''); if (v === null) return;
+    await db.from('prendas').update({ precio: num(v.trim()) }).eq('id', id);
+  } else if (a === 'borrar' && confirm('¿Borrar "' + p.titulo + '" y sus fotos?')) {
+    await db.storage.from('fotos').remove(p.fotos.map(u => u.split('/').pop()));
+    await db.from('prendas').delete().eq('id', id);
+  }
+  await cargarPrendas();
+});
+
+(async () => { const { data } = await db.auth.getSession(); mostrar(!!data.session); })();
+</script>
+</body>
+</html>

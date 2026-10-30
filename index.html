@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catálogo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="wrap">
+  <h1 id="negocio">Catálogo</h1>
+  <p>Ropa disponible. Tocá una prenda para ver todas las fotos y consultar.</p>
+</header>
+<main class="wrap">
+  <div class="filters">
+    <input id="q" type="search" placeholder="Buscar prenda" aria-label="Buscar prenda">
+    <select id="fcat" aria-label="Categoría"><option value="">Todas las categorías</option></select>
+    <select id="ftalle" aria-label="Talle"><option value="">Todos los talles</option></select>
+  </div>
+  <div id="grid" class="grid"></div>
+  <p id="vacio" class="mut hidden">No hay prendas con esos filtros.</p>
+</main>
+<dialog id="dlg"></dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const c = window.CONFIG, db = supabase.createClient(c.SUPABASE_URL, c.SUPABASE_KEY);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const money = n => n ? '$' + Number(n).toLocaleString('es-AR') : 'Consultar';
+let todas = [];
+
+document.title = c.NEGOCIO; $('#negocio').textContent = c.NEGOCIO;
+
+function opciones(sel, campo) {
+  [...new Set(todas.map(p => p[campo]).filter(Boolean))].sort()
+    .forEach(v => sel.append(new Option(v, v)));
+}
+
+function pintar() {
+  const q = $('#q').value.toLowerCase(), cat = $('#fcat').value, t = $('#ftalle').value;
+  const lista = todas.filter(p =>
+    (!cat || p.categoria === cat) && (!t || p.talle === t) &&
+    (!q || [p.titulo, p.color, p.descripcion].join(' ').toLowerCase().includes(q)));
+  $('#vacio').classList.toggle('hidden', lista.length > 0);
+  $('#grid').innerHTML = lista.map(p => `
+    <button class="card" data-id="${p.id}">
+      <div class="ph"><img loading="lazy" src="${esc(p.fotos[0])}" alt="${esc(p.titulo)}">
+        <span class="tag">${money(p.precio)}</span>
+        ${p.estado === 'reservado' ? '<span class="badge">Reservado</span>' : ''}</div>
+      <div class="tx"><h3>${esc(p.titulo)}</h3>
+        <span class="mut">${esc([p.talle && 'Talle ' + p.talle, p.color].filter(Boolean).join(' · '))}</span></div>
+    </button>`).join('');
+}
+
+function abrir(id) {
+  const p = todas.find(x => x.id === id);
+  const msg = `Hola! Me interesa: ${p.titulo}${p.talle ? ' (talle ' + p.talle + ')' : ''} - ${money(p.precio)}`;
+  $('#dlg').innerHTML = `
+    <div class="fotos">${p.fotos.map(f => `<img src="${esc(f)}" alt="${esc(p.titulo)}">`).join('')}</div>
+    <div class="dlg">
+      <h2>${esc(p.titulo)}</h2>
+      <strong>${money(p.precio)}</strong>
+      <span class="mut">${esc([p.categoria, p.talle && 'Talle ' + p.talle, p.color].filter(Boolean).join(' · '))}</span>
+      ${p.descripcion ? `<p>${esc(p.descripcion)}</p>` : ''}
+      ${p.estado === 'reservado' ? '<p class="mut">Esta prenda está reservada.</p>' : ''}
+      <a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${c.WHATSAPP}?text=${encodeURIComponent(msg)}">Consultar por WhatsApp</a>
+      <button class="sec" onclick="$('#dlg').close()">Cerrar</button>
+    </div>`;
+  $('#dlg').showModal();
+}
+
+$('#grid').addEventListener('click', e => { const b = e.target.closest('.card'); if (b) abrir(b.dataset.id); });
+$('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg').close(); });
+['#q', '#fcat', '#ftalle'].forEach(s => $(s).addEventListener('input', pintar));
+
+(async () => {
+  const { data, error } = await db.from('prendas').select('*').neq('estado', 'vendido').order('creada', { ascending: false });
+  if (error) { $('#grid').textContent = 'No se pudo cargar el catálogo. Probá de nuevo en unos minutos.'; return; }
+  todas = data.filter(p => p.fotos.length);
+  opciones($('#fcat'), 'categoria'); opciones($('#ftalle'), 'talle'); pintar();
+})();
+</script>
+</body>
+</html>
