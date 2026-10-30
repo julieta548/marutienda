@@ -13,9 +13,28 @@
   <a class="logo" id="negocio" href="./">Catálogo</a>
   <a class="btn wa sm" id="hwa" target="_blank" rel="noopener">Escribinos</a>
 </div></header>
-<main class="wrap">
+<section class="hero wrap">
+  <div>
+    <h1 id="titular">Ropa seleccionada, nueva todos los días</h1>
+    <p id="bajada" class="lead">Mirá lo que hay disponible hoy, elegí tu prenda y consultanos directo por WhatsApp.</p>
+    <div class="cta">
+      <a class="btn wa" href="#catalogo">Ver el catálogo</a>
+      <a class="btn sec" id="hwa2" target="_blank" rel="noopener">Escribinos por WhatsApp</a>
+    </div>
+  </div>
+  <div id="collage" class="collage hidden"></div>
+</section>
+<section class="pasos wrap" aria-label="Cómo comprar">
+  <h2>Cómo comprar</h2>
+  <ol>
+    <li><span class="n">1</span><h3>Elegí tu prenda</h3><p>Mirá fotos, talles y precios. Cargamos prendas nuevas todos los días.</p></li>
+    <li><span class="n">2</span><h3>Consultá por WhatsApp</h3><p>Tocá el botón de la prenda y te queda el mensaje listo para enviar.</p></li>
+    <li><span class="n">3</span><h3>Coordinamos</h3><p>Acordamos el pago y la entrega directamente por WhatsApp.</p></li>
+  </ol>
+</section>
+<main class="wrap" id="catalogo">
   <section class="intro">
-    <h1>Ropa disponible</h1>
+    <h2>Catálogo</h2>
     <p id="cuenta" class="mut">Cargando prendas...</p>
   </section>
   <div class="bar">
@@ -26,6 +45,12 @@
   <div id="grid" class="grid"></div>
   <p id="vacio" class="mut hidden">No hay prendas con esos filtros. Probá quitar alguno.</p>
 </main>
+<footer class="foot"><div class="wrap">
+  <strong class="logo" id="fnombre"></strong>
+  <p class="mut" id="fdatos"></p>
+  <div class="links" id="flinks"></div>
+  <p class="mut">© <span id="anio"></span></p>
+</div></footer>
 <dialog id="dlg"></dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -39,6 +64,12 @@ let todas = [], cat = '';
 
 document.title = c.NEGOCIO + ' · Catálogo'; $('#negocio').textContent = c.NEGOCIO;
 $('#hwa').href = `https://wa.me/${c.WHATSAPP}?text=${encodeURIComponent('Hola! Quería consultar por la ropa.')}`;
+$('#hwa2').href = $('#hwa').href;
+if (c.TITULAR) $('#titular').textContent = c.TITULAR;
+if (c.BAJADA) $('#bajada').textContent = c.BAJADA;
+$('#fnombre').textContent = c.NEGOCIO; $('#fdatos').textContent = c.UBICACION || ''; $('#anio').textContent = new Date().getFullYear();
+$('#flinks').innerHTML = `<a href="${$('#hwa').href}" target="_blank" rel="noopener">WhatsApp</a>` +
+  (c.INSTAGRAM ? `<a href="https://instagram.com/${encodeURIComponent(c.INSTAGRAM.replace('@', ''))}" target="_blank" rel="noopener">Instagram</a>` : '');
 
 function chips() {
   const cats = [...new Set(todas.map(p => p.categoria).filter(Boolean))].sort();
@@ -85,6 +116,7 @@ function abrir(p) {
 }
 
 $('#grid').addEventListener('click', e => { const b = e.target.closest('.card'); if (b) abrir(todas.find(x => x.id === b.dataset.id)); });
+$('#collage').addEventListener('click', e => { const b = e.target.closest('.mini'); if (b) abrir(todas.find(x => x.id === b.dataset.id)); });
 $('#chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) { cat = b.dataset.c; chips(); pintar(); } });
 $('#dlg').addEventListener('close', () => history.replaceState(null, '', location.pathname));
 $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg').close(); });
@@ -96,6 +128,12 @@ $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg')
   todas = data.filter(p => p.fotos.length);
   [...new Set(todas.map(p => p.talle).filter(Boolean))].sort().forEach(v => $('#ftalle').append(new Option(v, v)));
   chips(); pintar();
+  const ult = todas.slice(0, 3);
+  if (ult.length >= 2) {
+    $('#collage').style.setProperty('--n', ult.length);
+    $('#collage').innerHTML = ult.map(p => `<button class="mini" data-id="${p.id}" aria-label="Ver ${esc(p.titulo)}"><img src="${esc(p.fotos[0])}" alt=""><span class="tag">${money(p.precio)}</span></button>`).join('');
+    $('#collage').classList.remove('hidden');
+  }
   const pid = new URLSearchParams(location.search).get('p');
   if (pid) { const r = await db.from('prendas').select('*').eq('id', pid).maybeSingle(); if (r.data && r.data.fotos.length) abrir(r.data); }
 })();
