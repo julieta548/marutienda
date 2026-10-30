@@ -66,7 +66,8 @@ function pintar() {
 }
 
 function abrir(p) {
-  const msg = `Hola! Me interesa: ${p.titulo}${p.talle ? ' (talle ' + p.talle + ')' : ''} - ${money(p.precio)}`;
+  const link = location.origin + location.pathname + '?p=' + p.id;
+  const msg = `Hola! Me interesa: ${p.titulo}${p.talle ? ' (talle ' + p.talle + ')' : ''} - ${money(p.precio)}\n${link}`;
   $('#dlg').innerHTML = `
     <div class="fotos">${p.fotos.map(f => `<img src="${esc(f)}" alt="${esc(p.titulo)}">`).join('')}</div>
     <div class="dlg">
