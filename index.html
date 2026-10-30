@@ -56,8 +56,7 @@ function pintar() {
     </button>`).join('');
 }
 
-function abrir(id) {
-  const p = todas.find(x => x.id === id);
+function abrir(p) {
   const msg = `Hola! Me interesa: ${p.titulo}${p.talle ? ' (talle ' + p.talle + ')' : ''} - ${money(p.precio)}`;
   $('#dlg').innerHTML = `
     <div class="fotos">${p.fotos.map(f => `<img src="${esc(f)}" alt="${esc(p.titulo)}">`).join('')}</div>
@@ -67,13 +66,16 @@ function abrir(id) {
       <span class="mut">${esc([p.categoria, p.talle && 'Talle ' + p.talle, p.color].filter(Boolean).join(' · '))}</span>
       ${p.descripcion ? `<p>${esc(p.descripcion)}</p>` : ''}
       ${p.estado === 'reservado' ? '<p class="mut">Esta prenda está reservada.</p>' : ''}
-      <a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${c.WHATSAPP}?text=${encodeURIComponent(msg)}">Consultar por WhatsApp</a>
+      ${p.estado === 'vendido' ? '<p><strong>Esta prenda ya se vendió.</strong> Mirá el resto del catálogo.</p>' :
+        `<a class="btn wa" target="_blank" rel="noopener" href="https://wa.me/${c.WHATSAPP}?text=${encodeURIComponent(msg)}">Consultar por WhatsApp</a>`}
       <button class="sec" onclick="$('#dlg').close()">Cerrar</button>
     </div>`;
   $('#dlg').showModal();
+  history.replaceState(null, '', '?p=' + p.id);
 }
 
-$('#grid').addEventListener('click', e => { const b = e.target.closest('.card'); if (b) abrir(b.dataset.id); });
+$('#grid').addEventListener('click', e => { const b = e.target.closest('.card'); if (b) abrir(todas.find(x => x.id === b.dataset.id)); });
+$('#dlg').addEventListener('close', () => history.replaceState(null, '', location.pathname));
 $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg').close(); });
 ['#q', '#fcat', '#ftalle'].forEach(s => $(s).addEventListener('input', pintar));
 
@@ -82,6 +84,8 @@ $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg')
   if (error) { $('#grid').textContent = 'No se pudo cargar el catálogo. Probá de nuevo en unos minutos.'; return; }
   todas = data.filter(p => p.fotos.length);
   opciones($('#fcat'), 'categoria'); opciones($('#ftalle'), 'talle'); pintar();
+  const pid = new URLSearchParams(location.search).get('p');
+  if (pid) { const r = await db.from('prendas').select('*').eq('id', pid).maybeSingle(); if (r.data && r.data.fotos.length) abrir(r.data); }
 })();
 </script>
 </body>

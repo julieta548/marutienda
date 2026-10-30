@@ -41,3 +41,13 @@ label{font-size:.9rem;color:var(--mut);display:block;margin-bottom:2px}
 .row select{width:auto}
 .err{color:#B3261E}
 .hidden{display:none!important}
+.row{flex-wrap:wrap}
+.row .acts{display:flex;gap:6px;flex-wrap:wrap;width:100%}
+.row .acts button,.row .acts select{padding:6px 10px;font-size:.9rem}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:8px 10px;border-top:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-weight:600;border-top:0}
+.thumbs{display:flex;gap:10px;flex-wrap:wrap}
+.th{position:relative}
+.th img{width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer}
+.th button{position:absolute;top:-6px;right:-6px;padding:0;width:24px;height:24px;border-radius:50%}
