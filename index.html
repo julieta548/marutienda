@@ -3,36 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#F7F8F6">
+<meta name="theme-color" content="#1B1030">
 <title>Catálogo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="strip" id="anuncio">Prendas nuevas todos los días</div>
 <header class="top"><div class="wrap in">
   <a class="logo" id="negocio" href="./">Catálogo</a>
   <a class="btn wa sm" id="hwa" target="_blank" rel="noopener">Escribinos</a>
 </div></header>
-<section class="hero wrap">
-  <div>
-    <h1 id="titular">Ropa seleccionada, nueva todos los días</h1>
-    <p id="bajada" class="lead">Mirá lo que hay disponible hoy, elegí tu prenda y consultanos directo por WhatsApp.</p>
-    <div class="cta">
-      <a class="btn wa" href="#catalogo">Ver el catálogo</a>
-      <a class="btn sec" id="hwa2" target="_blank" rel="noopener">Escribinos por WhatsApp</a>
+<section class="banner" id="banner">
+  <div class="banner-in wrap">
+    <div>
+      <h1 id="titular">Ropa seleccionada, nueva todos los días</h1>
+      <p id="bajada" class="lead">Mirá lo que hay disponible hoy, elegí tu prenda y consultanos directo por WhatsApp.</p>
+      <div class="cta">
+        <a class="btn" href="#catalogo">Ver el catálogo</a>
+        <a class="btn sec" id="hwa2" target="_blank" rel="noopener">Escribinos por WhatsApp</a>
+      </div>
     </div>
+    <div id="collage" class="collage hidden"></div>
   </div>
-  <div id="collage" class="collage hidden"></div>
 </section>
-<section class="pasos wrap" aria-label="Cómo comprar">
+<section class="pasos-band" aria-label="Cómo comprar"><div class="pasos wrap">
   <h2>Cómo comprar</h2>
   <ol>
     <li><span class="n">1</span><h3>Elegí tu prenda</h3><p>Mirá fotos, talles y precios. Cargamos prendas nuevas todos los días.</p></li>
     <li><span class="n">2</span><h3>Consultá por WhatsApp</h3><p>Tocá el botón de la prenda y te queda el mensaje listo para enviar.</p></li>
     <li><span class="n">3</span><h3>Coordinamos</h3><p>Acordamos el pago y la entrega directamente por WhatsApp.</p></li>
   </ol>
-</section>
+</div></section>
 <main class="wrap" id="catalogo">
   <section class="intro">
     <h2>Catálogo</h2>
@@ -66,6 +69,8 @@ let todas = [], cat = '';
 document.title = c.NEGOCIO + ' · Catálogo'; $('#negocio').textContent = c.NEGOCIO;
 $('#hwa').href = `https://wa.me/${c.WHATSAPP}?text=${encodeURIComponent('Hola! Quería consultar por la ropa.')}`;
 $('#hwa2').href = $('#hwa').href;
+if (c.ANUNCIO) $('#anuncio').textContent = c.ANUNCIO;
+if (c.BANNER) { const b = $('#banner'); b.classList.add('con-foto'); b.style.backgroundImage = `url("${c.BANNER}")`; }
 if (c.TITULAR) $('#titular').textContent = c.TITULAR;
 if (c.BAJADA) $('#bajada').textContent = c.BAJADA;
 $('#fnombre').textContent = c.NEGOCIO; $('#fdatos').textContent = c.UBICACION || ''; $('#anio').textContent = new Date().getFullYear();
@@ -130,7 +135,7 @@ $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg')
   [...new Set(todas.map(p => p.talle).filter(Boolean))].sort().forEach(v => $('#ftalle').append(new Option(v, v)));
   chips(); pintar();
   const ult = todas.slice(0, 3);
-  if (ult.length >= 2) {
+  if (ult.length >= 2 && !c.BANNER) {
     $('#collage').style.setProperty('--n', ult.length);
     $('#collage').innerHTML = ult.map(p => `<button class="mini" data-id="${p.id}" aria-label="Ver ${esc(p.titulo)}"><img src="${esc(p.fotos[0])}" alt=""><span class="tag">${money(p.precio)}</span></button>`).join('');
     $('#collage').classList.remove('hidden');
