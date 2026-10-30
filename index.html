@@ -5,22 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Catálogo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="wrap">
-  <h1 id="negocio">Catálogo</h1>
-  <p>Ropa disponible. Tocá una prenda para ver todas las fotos y consultar.</p>
-</header>
+<header class="top"><div class="wrap in">
+  <a class="logo" id="negocio" href="./">Catálogo</a>
+  <a class="btn wa sm" id="hwa" target="_blank" rel="noopener">Escribinos</a>
+</div></header>
 <main class="wrap">
-  <div class="filters">
-    <input id="q" type="search" placeholder="Buscar prenda" aria-label="Buscar prenda">
-    <select id="fcat" aria-label="Categoría"><option value="">Todas las categorías</option></select>
+  <section class="intro">
+    <h1>Ropa disponible</h1>
+    <p id="cuenta" class="mut">Cargando prendas...</p>
+  </section>
+  <div class="bar">
+    <input id="q" type="search" placeholder="Buscar por nombre o color" aria-label="Buscar">
     <select id="ftalle" aria-label="Talle"><option value="">Todos los talles</option></select>
   </div>
+  <div id="chips" class="chips" role="group" aria-label="Categorías"></div>
   <div id="grid" class="grid"></div>
-  <p id="vacio" class="mut hidden">No hay prendas con esos filtros.</p>
+  <p id="vacio" class="mut hidden">No hay prendas con esos filtros. Probá quitar alguno.</p>
 </main>
 <dialog id="dlg"></dialog>
 
@@ -31,20 +35,25 @@ const c = window.CONFIG, db = supabase.createClient(c.SUPABASE_URL, c.SUPABASE_K
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const money = n => n ? '$' + Number(n).toLocaleString('es-AR') : 'Consultar';
-let todas = [];
+let todas = [], cat = '';
 
-document.title = c.NEGOCIO; $('#negocio').textContent = c.NEGOCIO;
+document.title = c.NEGOCIO + ' · Catálogo'; $('#negocio').textContent = c.NEGOCIO;
+$('#hwa').href = `https://wa.me/${c.WHATSAPP}?text=${encodeURIComponent('Hola! Quería consultar por la ropa.')}`;
 
-function opciones(sel, campo) {
-  [...new Set(todas.map(p => p[campo]).filter(Boolean))].sort()
-    .forEach(v => sel.append(new Option(v, v)));
+function chips() {
+  const cats = [...new Set(todas.map(p => p.categoria).filter(Boolean))].sort();
+  $('#chips').classList.toggle('hidden', !cats.length);
+  $('#chips').innerHTML = ['', ...cats].map(k =>
+    `<button class="chip" data-c="${esc(k)}" aria-pressed="${k === cat}">${k ? esc(k) : 'Todo'}</button>`).join('');
 }
 
 function pintar() {
-  const q = $('#q').value.toLowerCase(), cat = $('#fcat').value, t = $('#ftalle').value;
+  const q = $('#q').value.toLowerCase(), t = $('#ftalle').value;
   const lista = todas.filter(p =>
     (!cat || p.categoria === cat) && (!t || p.talle === t) &&
     (!q || [p.titulo, p.color, p.descripcion].join(' ').toLowerCase().includes(q)));
+  const fecha = todas[0] ? new Date(todas[0].creada).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' }) : '';
+  $('#cuenta').textContent = `${lista.length} ${lista.length === 1 ? 'prenda' : 'prendas'}` + (fecha ? ` · Última carga: ${fecha}` : '');
   $('#vacio').classList.toggle('hidden', lista.length > 0);
   $('#grid').innerHTML = lista.map(p => `
     <button class="card" data-id="${p.id}">
@@ -75,15 +84,17 @@ function abrir(p) {
 }
 
 $('#grid').addEventListener('click', e => { const b = e.target.closest('.card'); if (b) abrir(todas.find(x => x.id === b.dataset.id)); });
+$('#chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) { cat = b.dataset.c; chips(); pintar(); } });
 $('#dlg').addEventListener('close', () => history.replaceState(null, '', location.pathname));
 $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg').close(); });
-['#q', '#fcat', '#ftalle'].forEach(s => $(s).addEventListener('input', pintar));
+['#q', '#ftalle'].forEach(s => $(s).addEventListener('input', pintar));
 
 (async () => {
   const { data, error } = await db.from('prendas').select('*').neq('estado', 'vendido').order('creada', { ascending: false });
-  if (error) { $('#grid').textContent = 'No se pudo cargar el catálogo. Probá de nuevo en unos minutos.'; return; }
+  if (error) { $('#cuenta').textContent = 'No se pudo cargar el catálogo. Probá de nuevo en unos minutos.'; return; }
   todas = data.filter(p => p.fotos.length);
-  opciones($('#fcat'), 'categoria'); opciones($('#ftalle'), 'talle'); pintar();
+  [...new Set(todas.map(p => p.talle).filter(Boolean))].sort().forEach(v => $('#ftalle').append(new Option(v, v)));
+  chips(); pintar();
   const pid = new URLSearchParams(location.search).get('p');
   if (pid) { const r = await db.from('prendas').select('*').eq('id', pid).maybeSingle(); if (r.data && r.data.fotos.length) abrir(r.data); }
 })();
